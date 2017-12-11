@@ -1,0 +1,127 @@
+---
+title: "Inter-batteries analysis"
+author: "Grzegorz Spychala"
+date: "11 dicembre 2017"
+output: html_document
+---
+
+```{r}
+n <- 10
+```
+
+**1**
+
+**Read the "zip_train.dat" and "zip_test.dat" files provided.**
+```{r}
+setwd("~/miri/kblmm/multivariate_modelling/digit_recognition")
+df.train <- read.table('data/zip_train.dat')
+df.test <- read.table('data/zip_test.dat')
+```
+
+**Select the same 5% random sample (without replacement) of the train data used in exercise 1.**
+
+```{r}
+train.samples <- sample(nrow(df.train), 0.05 * nrow(df.train))
+```
+
+**Use this sample as your training data, and the complete test data for testing.**
+
+```{r}
+X.train <- as.matrix(df.train[train.samples, -1])
+Y.train <- df.train[train.samples, 1]
+
+X.test <- as.matrix(df.test[, -1])
+Y.test <- df.test[, 1]
+```
+
+**2**
+
+**Define the response matrix (Y) and the predictor matrix (X).**
+
+X was ready before.
+
+```{r}
+oneHot <- function(x) {
+  result <- rep(0, 10)
+  result[x + 1] <- 1
+  return(result)
+}
+
+Y.train.one.hot <- t(sapply(Y.train, oneHot))
+Y.test.one.hot <- t(sapply(Y.test, oneHot))
+```
+
+
+**Center the predictor matrix.**
+
+```{r}
+X.train <- scale(X.train, scale = FALSE)
+X.test <- scale(X.test, scale = FALSE)
+```
+
+
+**3**
+
+**Perform the Inter Batteries Analysis following the formulae given in the slides.**
+
+```{r}
+rxy <- cor(X.train, Y.train.one.hot)
+A = eigen(rxy %*% t(rxy))$vectors
+Xt = X.train %*% A
+```
+
+**Decide how many components you retain for prediction**
+
+```{r}
+T.test <- X.test %*% A
+
+nds <- 2:(n - 1)
+ers = numeric(length(nds))
+
+for(i in 1:length(nds)) {
+  nd <- nds[i]
+  lmY <- lm(Y.train.one.hot ~ Xt[, 1:nd])
+  pred.one.hot <- T.test[, 1:nd] %*% lmY$coefficients[-1, ] + lmY$coefficients[1, ]
+  pred <- as.numeric(apply(pred.one.hot, 1, which.max) - 1)
+  ers[i] <- sum(pred != as.numeric(Y.test)) / length(pred)
+}
+
+nd <- nds[which.min(ers)]
+```
+
+```{r}
+lmY <- lm(Y.train.one.hot ~ Xt[, 1:nd])
+```
+
+**4**
+
+**Predict the responses in the test data, be aware of the appropriate centering.**
+
+```{r}
+T.test <- X.test %*% A
+predictions.one.hot.test <- T.test[, 1:nd] %*% lmY$coefficients[-1, ] + lmY$coefficients[1, ]
+```
+
+**Compute the average R2 in the test data.**
+
+```{r}
+TSS = diag(t(Y.test.one.hot) %*% Y.test.one.hot)
+RSS = diag(t(Y.test.one.hot - predictions.one.hot.test) %*% (Y.test.one.hot - predictions.one.hot.test))
+mean(1 - (RSS / TSS))
+```
+
+**5**
+
+**Assign every test individual to the maximum response.**
+
+```{r}
+predictions.test <- as.numeric(apply(predictions.one.hot.test, 1, which.max) - 1)
+```
+
+
+**Compute the error rate.**
+
+```{r}
+sum(predictions.test != as.numeric(Y.test)) / length(predictions.test)
+```
+
