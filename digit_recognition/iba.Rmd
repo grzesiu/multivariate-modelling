@@ -87,13 +87,13 @@ ers = numeric(length(nds))
 
 for(i in 1:length(nds)) {
   nd <- nds[i]
-  lmY <- lm(Y.train.one.hot ~ x.t.train[, 1:nd])
   coefs <- getCoefs(Y.train.one.hot, x.t.train[, 1:nd])
   intercept <- colMeans(Y.train.one.hot -  x.t.train[, 1:nd] %*% coefs)
-  pred.one.hot <- x.t.test[, 1:nd] %*% lmY$coefficients[-1, ] + lmY$coefficients[1, ]
+  pred.one.hot <- x.t.test[, 1:nd] %*% coefs + intercept
   pred <- as.numeric(apply(pred.one.hot, 1, which.max) - 1)
   ers[i] <- sum(pred != as.numeric(Y.test)) / length(pred)
 }
+
 nd <- nds[which.min(ers)]
 nd
 ```
