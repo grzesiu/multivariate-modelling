@@ -20,6 +20,7 @@ Our training dataset consists of 7291 samples. By choosing 5\% of data we shrink
 
 ```{r}
 train.samples <- sample(nrow(df.train), 0.05 * nrow(df.train))
+n <- length(train.samples)
 ```
 
 **Use this sample as your training data, and the complete test data for testing.**
@@ -67,8 +68,9 @@ X.test <- scale(X.test, scale = FALSE)
 **Perform the Inter Batteries Analysis following the formulae given in the slides.**
 
 ```{r}
-rxy <- cor(X.train, Y.train.one.hot)
-A = eigen(rxy %*% t(rxy))$vectors
+N <- diag(1 / n, n, n)
+xny <- t(X.train) %*% N %*% Y.train.one.hot
+A = eigen(xny %*% t(xny))$vectors
 x.t.train = X.train %*% A
 x.t.test <- X.test %*% A
 ```
@@ -79,8 +81,9 @@ We have to keep in mind that the response matrix (Y) is not of the full rank. Gi
 
 ```{r}
 library(Matrix)
-rankMatrix(rxy)
+rankMatrix(xny)
 ```
+
 
 Nevertheless, we will try with bigger number of them in order to see, how does IBA deal with multicollinearity.
 
@@ -94,7 +97,7 @@ Using the notation from the lecture `getCoefs` calculates the $\widetilde{B}_{(r
 
 ```{r}
 getCoefs <- function(Y.one.hot, x.t) {
-  return(solve(t(x.t) %*% x.t) %*% t(x.t) %*% Y.one.hot)
+  return(solve(t(x.t) %*% N %*% x.t) %*% t(x.t) %*% N %*% Y.one.hot)
 }
 ```
 
@@ -186,7 +189,7 @@ The error rate calculated as the fraction of misclassified data is equal to:
 lm.best$er[[1]]
 ```
 
-Summing up after performing the task, the conclusions that the The Inter Batteries Analysis:
+Summing up, after performing the task the conclusions that the The Inter Batteries Analysis:
 - provide components that are good for prediction and good factors for their own group,
 - it deals well with collinearity
 can be confirmed.
