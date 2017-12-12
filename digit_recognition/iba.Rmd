@@ -67,30 +67,35 @@ X.test <- scale(X.test, scale = FALSE)
 ```{r}
 rxy <- cor(X.train, Y.train.one.hot)
 A = eigen(rxy %*% t(rxy))$vectors
-Xt = X.train %*% A
+x.t.train = X.train %*% A
 ```
 
 **Decide how many components you retain for prediction**
 
 ```{r}
-T.test <- X.test %*% A
+getCoefs <- function(Y, x.t) {
+  return(solve(t(x.t) %*% x.t) %*% t(x.t) %*% Y)
+}
+```
+
+
+```{r}
+x.t.test <- X.test %*% A
 
 nds <- 2:(n - 1)
 ers = numeric(length(nds))
 
 for(i in 1:length(nds)) {
   nd <- nds[i]
-  lmY <- lm(Y.train.one.hot ~ Xt[, 1:nd])
-  pred.one.hot <- T.test[, 1:nd] %*% lmY$coefficients[-1, ] + lmY$coefficients[1, ]
+  lmY <- lm(Y.train.one.hot ~ x.t.train[, 1:nd])
+  coefs <- getCoefs(Y.train.one.hot, x.t.train[, 1:nd])
+  intercept <- colMeans(Y.train.one.hot -  x.t.train[, 1:nd] %*% coefs)
+  pred.one.hot <- x.t.test[, 1:nd] %*% lmY$coefficients[-1, ] + lmY$coefficients[1, ]
   pred <- as.numeric(apply(pred.one.hot, 1, which.max) - 1)
   ers[i] <- sum(pred != as.numeric(Y.test)) / length(pred)
 }
-
 nd <- nds[which.min(ers)]
-```
-
-```{r}
-lmY <- lm(Y.train.one.hot ~ Xt[, 1:nd])
+nd
 ```
 
 **4**
@@ -98,8 +103,7 @@ lmY <- lm(Y.train.one.hot ~ Xt[, 1:nd])
 **Predict the responses in the test data, be aware of the appropriate centering.**
 
 ```{r}
-T.test <- X.test %*% A
-predictions.one.hot.test <- T.test[, 1:nd] %*% lmY$coefficients[-1, ] + lmY$coefficients[1, ]
+predictions.one.hot.test <- x.t.test[, 1:nd] %*% lmY$coefficients[-1, ] + lmY$coefficients[1, ]
 ```
 
 **Compute the average R2 in the test data.**
