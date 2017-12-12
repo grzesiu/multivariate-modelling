@@ -1,13 +1,9 @@
 ---
 title: "Inter-batteries analysis"
-author: "Grzegorz Spychala"
-date: "11 dicembre 2017"
+author: "Grzegorz Spychała"
+date: "December 13, 2017"
 output: html_document
 ---
-
-```{r}
-n <- 10
-```
 
 **1**
 
@@ -19,6 +15,8 @@ df.test <- read.table('data/zip_test.dat')
 ```
 
 **Select the same 5% random sample (without replacement) of the train data used in exercise 1.**
+
+Our training dataset consists of 7291 samples. By choosing 5\% of data we shrink it down to 364. By doing so we will try to fit the model with number of observations close to the number	 of the parameters (in this case 256). Such a datasets are the target of PCR method.
 
 ```{r}
 train.samples <- sample(nrow(df.train), 0.05 * nrow(df.train))
@@ -38,7 +36,9 @@ Y.test <- df.test[, 1]
 
 **Define the response matrix (Y) and the predictor matrix (X).**
 
-X was ready before.
+X matrix was ready before.
+
+Because the digits have to be treated as categorical variables they will be represented by one-hot encoding.
 
 ```{r}
 oneHot <- function(x) {
@@ -54,6 +54,8 @@ Y.test.one.hot <- t(sapply(Y.test, oneHot))
 
 **Center the predictor matrix.**
 
+Because certain pixels are more likely to be set for a certain digits, only data centering is performed, without dividing by standard deviation.
+
 ```{r}
 X.train <- scale(X.train, scale = FALSE)
 X.test <- scale(X.test, scale = FALSE)
@@ -68,34 +70,82 @@ X.test <- scale(X.test, scale = FALSE)
 rxy <- cor(X.train, Y.train.one.hot)
 A = eigen(rxy %*% t(rxy))$vectors
 x.t.train = X.train %*% A
+x.t.test <- X.test %*% A
 ```
 
 **Decide how many components you retain for prediction**
 
+We have to keep in mind that the response matrix (Y) is not of the full rank. Given the nine columns of it the tenth one can we deduced from it. It means that up to 9 components should be taken. 
+
 ```{r}
-getCoefs <- function(Y, x.t) {
-  return(solve(t(x.t) %*% x.t) %*% t(x.t) %*% Y)
+library(Matrix)
+rankMatrix(rxy)
+```
+
+Nevertheless, we will try with bigger number of them in order to see, how does IBA deal with multicollinearity.
+
+```{r}
+nds <- 1:20
+```
+
+Let's define some helper functions.
+
+Using the notation from the lecture `getCoefs` calculates the $\widetilde{B}_{(r)}$ taking scores $T^{IBA}_{(r)}$ (first $r$ significant ones).
+
+```{r}
+getCoefs <- function(Y.one.hot, x.t) {
+  return(solve(t(x.t) %*% x.t) %*% t(x.t) %*% Y.one.hot)
+}
+```
+
+```{r}
+getR2 <- function(Y.one.hot, pred.one.hot) {
+  TSS = diag(t(Y.one.hot) %*% Y.test.one.hot)
+  RSS = diag(t(Y.one.hot - pred.one.hot) %*% (Y.one.hot - pred.one.hot))
+  mean(1 - (RSS / TSS))
+}
+```
+
+Here the coeficients, the intercept, the predictions in one-hot and original form (as digits 0-9), error rate and R2 score will be calculated.
+
+```{r}
+lm <- function(Y.train.one.hot, x.t.train, Y.test.one.hot, Y.test, x.t.test, nd) {
+  coefs <- getCoefs(Y.train.one.hot, x.t.train[, 1:nd])
+  intercept <- colMeans(Y.train.one.hot -  x.t.train[, 1:nd] %*% coefs)
+  pred.one.hot <- x.t.test[, 1:nd] %*% coefs + intercept
+  pred <- as.numeric(apply(pred.one.hot, 1, which.max) - 1)
+  R2 <- getR2(Y.test.one.hot, pred.one.hot)
+  er <- sum(pred != as.numeric(Y.test)) / length(pred)
+  return(list(coefs = coefs,
+              intercept = intercept,
+              pred.one.hot = pred.one.hot,
+              pred = pred,
+              R2 = R2,
+              er = er))
 }
 ```
 
 
 ```{r}
-x.t.test <- X.test %*% A
-
-nds <- 2:(n - 1)
-ers = numeric(length(nds))
-
-for(i in 1:length(nds)) {
-  nd <- nds[i]
-  coefs <- getCoefs(Y.train.one.hot, x.t.train[, 1:nd])
-  intercept <- colMeans(Y.train.one.hot -  x.t.train[, 1:nd] %*% coefs)
-  pred.one.hot <- x.t.test[, 1:nd] %*% coefs + intercept
-  pred <- as.numeric(apply(pred.one.hot, 1, which.max) - 1)
-  ers[i] <- sum(pred != as.numeric(Y.test)) / length(pred)
+getLms <- function(Y.train.one.hot, x.t.train, Y.test.one.hot, Y.test, x.t.test, nds) {
+  lms <- sapply(nds, function(nd) lm(Y.train.one.hot, x.t.train, Y.test.one.hot, Y.test, x.t.test, nd))
+  return(as.data.frame(t(lms)))
 }
+```
 
-nd <- nds[which.min(ers)]
-plot(nds, ers, type = 'o')
+```{r}
+lms <- getLms(Y.train.one.hot, x.t.train, Y.test.one.hot, Y.test, x.t.test, nds)
+```
+
+
+```{r}
+plot(nds, lms$er, type = 'o')
+```
+
+On the plot it can be seen, that IBA method is doing very well with collinearity. The error rate drops from 1 to 9 components and after that remains almost constant.
+
+```{r}
+nds[which.min(lms$er[1:9])]
 ```
 
 **4**
@@ -103,29 +153,40 @@ plot(nds, ers, type = 'o')
 **Predict the responses in the test data, be aware of the appropriate centering.**
 
 ```{r}
-predictions.one.hot.test <- x.t.test[, 1:nd] %*% lmY$coefficients[-1, ] + lmY$coefficients[1, ]
+lm.best <- lms[which.min(lms$er[1:9]), ]
 ```
 
 **Compute the average R2 in the test data.**
 
+The average R2 score was computed before. It could be worth to see the plot of it as the function of components taken.
+
 ```{r}
-TSS = diag(t(Y.test.one.hot) %*% Y.test.one.hot)
-RSS = diag(t(Y.test.one.hot - predictions.one.hot.test) %*% (Y.test.one.hot - predictions.one.hot.test))
-mean(1 - (RSS / TSS))
+plot(nds, lms$R2, type = 'o')
+```
+
+Here, as in the previous section, it can be observed that collinearity is not a problem for this method.
+
+For 9 components the following coefficient of determination was obtained:
+
+```{r}
+lm.best$R2[[1]]
 ```
 
 **5**
 
 **Assign every test individual to the maximum response.**
 
-```{r}
-predictions.test <- as.numeric(apply(predictions.one.hot.test, 1, which.max) - 1)
-```
-
+Predicted digits are stored in `lm.best$pred`.
 
 **Compute the error rate.**
 
+The error rate calculated as the fraction of misclassified data is equal to:
+
 ```{r}
-sum(predictions.test != as.numeric(Y.test)) / length(predictions.test)
+lm.best$er[[1]]
 ```
 
+Summing up after performing the task, the conclusions that the The Inter Batteries Analysis:
+- provide components that are good for prediction and good factors for their own group,
+- it deals well with collinearity
+can be confirmed.
