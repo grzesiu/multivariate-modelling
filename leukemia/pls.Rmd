@@ -1,0 +1,15 @@
+---
+title: "Exercise - PLS1. Leukemia data"
+output: html_document
+---
+
+**1**
+
+```{r}
+data.train <- read.csv("data-train.csv", sep = ";")
+data.test <- read.csv("data-test.csv", sep = ";")
+
+pred.train <- read.csv("pred-train.csv", sep = ";")
+pred.test <- read.csv("pred-test.csv", sep = ";")
+```
+
