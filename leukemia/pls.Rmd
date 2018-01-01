@@ -3,13 +3,24 @@ title: "Exercise - PLS1. Leukemia data"
 output: html_document
 ---
 
-**1**
+```{r}
+prepare <- function(X) {
+  X <- t(X[seq(3, ncol(X), 2)])
+  row.names <- rownames(X)
+  row.names <- sapply(row.names, function(n) substr(n, 2, nchar(n)))
+  rownames(X) <- as.numeric(row.names)
+  X <- X[order(as.numeric(row.names(X))), ]
+  return(X)
+}
+
+X.train <- prepare(read.csv("data-train.csv", sep = ";"))
+X.test <- prepare(read.csv("data-test.csv", sep = ";"))
+
+y.train <- read.csv("pred-train.csv", sep = ";")$Actual == "AML"
+y.test <- read.csv("pred-test.csv", sep = ";")$Actual == "AML"
+``` 
 
 ```{r}
-data.train <- read.csv("data-train.csv", sep = ";")
-data.test <- read.csv("data-test.csv", sep = ";")
 
-pred.train <- read.csv("pred-train.csv", sep = ";")
-pred.test <- read.csv("pred-test.csv", sep = ";")
 ```
 
