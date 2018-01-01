@@ -21,6 +21,8 @@ y.test <- read.csv("pred-test.csv", sep = ";")$Actual == "AML"
 ``` 
 
 ```{r}
-
+col.means.X.train <- colMeans(X.train)
+X.train <- sweep(X.train, 2, col.means.X.train)
+X.test <- sweep(X.test, 2, col.means.X.train)
 ```
 
