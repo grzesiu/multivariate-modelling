@@ -3,6 +3,8 @@ title: "Exercise - PLS1. Leukemia data"
 output: html_document
 ---
 
+**1, 2** 
+
 ```{r}
 prepare <- function(X) {
   X <- t(X[seq(3, ncol(X), 2)])
@@ -16,13 +18,54 @@ prepare <- function(X) {
 X.train <- prepare(read.csv("data-train.csv", sep = ";"))
 X.test <- prepare(read.csv("data-test.csv", sep = ";"))
 
-y.train <- read.csv("pred-train.csv", sep = ";")$Actual == "AML"
-y.test <- read.csv("pred-test.csv", sep = ";")$Actual == "AML"
+y.train <- read.csv("pred-train.csv", sep = ";")$Actual == "ALL"
+y.test <- read.csv("pred-test.csv", sep = ";")$Actual == "ALL"
 ``` 
 
 ```{r}
 col.means.X.train <- colMeans(X.train)
 X.train <- sweep(X.train, 2, col.means.X.train)
 X.test <- sweep(X.test, 2, col.means.X.train)
+```
+
+**3**
+
+```{r}
+p1 <- plsr(y.train ~ X.train, ncomp = 10, validation = "LOO")
+plot(RMSEP(p1), legendpos = "topright")
+plot(R2(p1), legendpos = "bottomright")
+```
+
+After the analysis of the above plots that choosing 5 components would be enough for our model.
+
+```{r}
+c <- 5
+```
+
+**4**
+
+```{r}
+projection <- X.test %*% p1$projection[, 1:c]
+```
+
+**5**
+
+```{r}
+getColor <- function(x) {
+  if(x == 1) 
+    return("blue")
+  else
+    return("red")
+}
+
+plot(p1$scores[, 1:2], col = sapply(y.train, getColor), main = "individuals in the plane of the two first PLS1 components")
+points(projection[, 1:2], col = sapply(y.test, getColor), pch = 19)
+
+legend(
+  "topleft",
+  c("ALL trian", "AML train", "ALL test", "AML test"),
+  pch = c(1, 1, 19, 19),
+  col = c("blue", "red", "blue", "red")
+  )
 ```
 
