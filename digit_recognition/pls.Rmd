@@ -78,7 +78,7 @@ Each response the `adjCV` score will be weighted by the number of it's represent
 
 ```{r}
 adjCV <- RMSEP(p2)$val[2,,]
-adjCV.weighted <- as.numeric(colSums(Y.train.one.hot) %*% adjCV)
+adjCV.weighted <- as.numeric(colSums(Y.train.one.hot) %*% adjCV / sum(colSums(Y.train.one.hot)))
 plot(adjCV.weighted)
 ```
 
@@ -91,9 +91,39 @@ c
 
 **4**
 
-**Predict the responses in the test data, be aware of the appropriate centering. Compute the average R2 in the test data.**
+**Predict the responses in the test data, be aware of the appropriate centering.**
 
 ```{r}
+m <- lm(Y.train.one.hot ~ p2$scores[, 1:c])
 
+projection <- X.test %*% p2$projection[, 1:c]
+pred.one.hot <- projection %*% m$coefficients[-1, ] + m$coefficients[1, ]
+```
+
+**Compute the average R2 in the test data.**
+
+```{r}
+getR2 <- function(Y.one.hot, pred.one.hot) {
+  TSS = diag(t(Y.one.hot) %*% Y.test.one.hot)
+  RSS = diag(t(Y.one.hot - pred.one.hot) %*% (Y.one.hot - pred.one.hot))
+  return(1 - (RSS / TSS))
+}
+
+r2 <- getR2(Y.test.one.hot, pred.one.hot)
+sum(colSums(Y.train.one.hot) * r2) / sum(colSums(Y.train.one.hot))
+```
+
+**5**
+
+**Assign every test individual to the maximum response.**
+
+```{r}
+pred <- apply(pred.one.hot, 1, which.max) - 1
+```
+
+**Compute the error rate.**
+
+```{r}
+sum(Y.test != pred) / length(pred)
 ```
 
