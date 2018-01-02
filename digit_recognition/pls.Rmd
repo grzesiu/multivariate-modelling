@@ -66,7 +66,8 @@ X.test <- scale(X.test, scale = FALSE)
 **Perform a PLSR2 using “CV” or “LOO” for validation.**
 
 ```{r}
-p2 <- plsr(Y.train.one.hot ~ X.train, ncomp = 50, validation = "LOO")
+ncomp <- 50
+pls <- plsr(Y.train.one.hot ~ X.train, ncomp = ncomp, validation = "LOO")
 ```
 
 **Decide how many components you retain for prediction?**
@@ -77,30 +78,20 @@ Each response the `adjCV` score will be weighted by the number of it's represent
 
 
 ```{r}
-adjCV <- RMSEP(p2)$val[2,,]
+adjCV <- RMSEP(pls)$val[2,,]
 adjCV.weighted <- as.numeric(colSums(Y.train.one.hot) %*% adjCV / sum(colSums(Y.train.one.hot)))
-plot(adjCV.weighted)
+plot(0:ncomp, adjCV.weighted)
 ```
 
-The number of components that optimize the value of `adjCV` is:
+The number of components that optimize the value of `adjCV` is (-1 because the first model has no components, only intercept):
 
 ```{r}
-c <- which.min(adjCV.weighted) - 1
-c
+which.min(adjCV.weighted) - 1
 ```
 
-**4**
+Nevertheless other numbers of components will be tested to see the error rate on the test data.
 
-**Predict the responses in the test data, be aware of the appropriate centering.**
-
-```{r}
-m <- lm(Y.train.one.hot ~ p2$scores[, 1:c])
-
-projection <- X.test %*% p2$projection[, 1:c]
-pred.one.hot <- projection %*% m$coefficients[-1, ] + m$coefficients[1, ]
-```
-
-**Compute the average R2 in the test data.**
+In order to calculate the R2 score the following function is defined:
 
 ```{r}
 getR2 <- function(Y.one.hot, pred.one.hot) {
@@ -108,22 +99,67 @@ getR2 <- function(Y.one.hot, pred.one.hot) {
   RSS = diag(t(Y.one.hot - pred.one.hot) %*% (Y.one.hot - pred.one.hot))
   return(1 - (RSS / TSS))
 }
+```
 
-r2 <- getR2(Y.test.one.hot, pred.one.hot)
-sum(colSums(Y.train.one.hot) * r2) / sum(colSums(Y.train.one.hot))
+The `pred` function defined below will be applied over the vector of components numbers:
+
+```{r}
+pred <- function(pls, Y.train.one.hot, X.test, Y.test.one.hot, comps) {
+  m <- lm(Y.train.one.hot ~ pls$scores[, 1:comps])
+  projection <- X.test %*% pls$projection[, 1:comps]
+  pred.one.hot <- projection %*% m$coefficients[-1, ] + m$coefficients[1, ]  
+  r2 <- getR2(Y.test.one.hot, pred.one.hot)
+  mean.r2 <- sum(colSums(Y.train.one.hot) * r2) / sum(colSums(Y.train.one.hot))
+  pred <- apply(pred.one.hot, 1, which.max) - 1
+  error <- sum(Y.test != pred) / length(pred)
+  return(c(comps = comps,
+           mean.r2 = mean.r2,
+           error = error))
+}
+```
+
+```{r}
+preds <- t(sapply(1:ncomp, function(comps) pred(pls, Y.train.one.hot, X.test, Y.test.one.hot, comps)))
+preds <- as.data.frame(preds)
+```
+
+**Compute the average R2 in the test data.**
+
+The average R2 as the function of the number of components:
+
+```{r}
+plot(preds$comps, preds$mean.r2)
+```
+
+The number of components that maximizes the average coefficient of determination of the test data is: 
+
+```{r}
+preds$c[which.max(preds$mean.r2)]
 ```
 
 **5**
 
-**Assign every test individual to the maximum response.**
+**Assign every test individual to the maximum response and compute the error rate.**
 
 ```{r}
-pred <- apply(pred.one.hot, 1, which.max) - 1
+plot(preds$c, preds$error)
 ```
 
-**Compute the error rate.**
+The number of components that minimizes the error rate on the test data is: 
 
 ```{r}
-sum(Y.test != pred) / length(pred)
+preds$c[which.min(preds$error)]
+```
+
+And the error rate obtained with it is:
+
+```{r}
+min(preds$error)
+```
+
+While the error rate obtained with the number of components that has maximized the R2 is:
+
+```{r}
+preds$error[which.max(preds$mean.r2)]
 ```
 
