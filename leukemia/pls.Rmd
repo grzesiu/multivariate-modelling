@@ -3,6 +3,10 @@ title: "Exercise - PLS1. Leukemia data"
 output: html_document
 ---
 
+```{r, message=FALSE}
+library(pls)
+```
+
 **1, 2** 
 
 ```{r}

@@ -1,0 +1,59 @@
+---
+title: "Exercise - PLS2. ZIP data"
+output: html_document
+---
+
+**1**
+
+**Read the "zip_train.dat" and "zip_test.dat" files provided.**
+```{r}
+train <- read.table('data/zip_train.dat')
+test <- read.table('data/zip_test.dat')
+```
+
+**Select the same 5% random sample (without replacement) of the train data used in exercise 1.**
+
+Our training dataset consists of 7291 samples. By choosing 5\% of data we shrink it down to 364. By doing so we will try to fit the model with number of observations close to the number	 of the parameters (in this case 256). Such a datasets are the target of PCR method.
+
+```{r}
+train.samples <- sample(nrow(train), 0.05 * nrow(train))
+n <- length(train.samples)
+```
+
+**Use this sample as your training data, and the complete test data for testing.**
+
+```{r}
+X.train <- as.matrix(train[train.samples, -1])
+Y.train <- train[train.samples, 1]
+
+X.test <- as.matrix(test[, -1])
+Y.test <- test[, 1]
+```
+
+**2**
+
+**Define the response matrix (Y) and the predictor matrix (X).**
+
+X matrix was ready before.
+
+Because the digits have to be treated as categorical variables they will be represented by one-hot encoding.
+
+```{r}
+oneHot <- function(x) {
+  result <- rep(0, 10)
+  result[x + 1] <- 1
+  return(result)
+}
+
+Y.train.one.hot <- t(sapply(Y.train, oneHot))
+Y.test.one.hot <- t(sapply(Y.test, oneHot))
+```
+
+
+**Center the predictor matrix.**
+
+```{r}
+X.train <- scale(X.train, scale = FALSE)
+X.test <- scale(X.test, scale = FALSE)
+```
+
