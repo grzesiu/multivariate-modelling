@@ -85,7 +85,7 @@ rankMatrix(xny)
 ```
 
 
-Nevertheless, we will try with bigger number of them in order to see, how does IBA deal with multicollinearity.
+Nevertheless, we will try with bigger number of them in order to see, how does IBA deal with multicolinearity.
 
 ```{r}
 nds <- 1:20
@@ -145,7 +145,7 @@ lms <- getLms(Y.train.one.hot, x.t.train, Y.test.one.hot, Y.test, x.t.test, nds)
 plot(nds, lms$er, type = 'o')
 ```
 
-On the plot it can be seen, that IBA method is doing very well with collinearity. The error rate drops from 1 to 9 components and after that remains almost constant.
+On the plot it can be seen, that IBA method is doing very well with colinearity. The error rate drops from 1 to 9 components and after that remains almost constant.
 
 ```{r}
 nds[which.min(lms$er[1:9])]
@@ -167,7 +167,7 @@ The average R2 score was computed before. It could be worth to see the plot of i
 plot(nds, lms$R2, type = 'o')
 ```
 
-Here, as in the previous section, it can be observed that collinearity is not a problem for this method.
+Here, as in the previous section, it can be observed that colinearity is not a problem for this method.
 
 For 9 components the following coefficient of determination was obtained:
 
@@ -191,5 +191,5 @@ lm.best$er[[1]]
 
 Summing up, after performing the task the conclusions that the The Inter Batteries Analysis:
 - provide components that are good for prediction and good factors for their own group,
-- it deals well with collinearity
+- it deals well with colinearity
 can be confirmed.
