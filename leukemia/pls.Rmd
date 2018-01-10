@@ -3,11 +3,19 @@ title: "Exercise - PLS1. Leukemia data"
 output: html_document
 ---
 
+The purpose of this assignment is to try to differentiate between two types of leukemia (marked as ALL and AML) using the Partial Least Squares algorithm.
+
+The `pls` package will be used.
+
 ```{r, message=FALSE}
 library(pls)
 ```
 
 **1, 2** 
+
+Because we are interested only in some of the data (numeric values) it is necessary to preprocess the data before the analysis. 
+
+The data are also not in order so it is necessary to sort them so that the explanatory variables match the response.
 
 ```{r}
 prepare <- function(X) {
@@ -21,10 +29,16 @@ prepare <- function(X) {
 
 X.train <- prepare(read.csv("data-train.csv", sep = ";"))
 X.test <- prepare(read.csv("data-test.csv", sep = ";"))
+```
 
+The response variables will be loaded from preprocessed files. They are boolean vectors with `TRUE` value denoting type `ALL` and `FALSE` value denoting type `AML` leukemia.
+
+```{r `}
 y.train <- read.csv("pred-train.csv", sep = ";")$Actual == "ALL"
 y.test <- read.csv("pred-test.csv", sep = ";")$Actual == "ALL"
 ``` 
+
+Then both the train and test data are being centered with respect to the mean of the training data.
 
 ```{r}
 col.means.X.train <- colMeans(X.train)
@@ -34,25 +48,34 @@ X.test <- sweep(X.test, 2, col.means.X.train)
 
 **3**
 
+Here the PLS regression is being performed. 
+
 ```{r}
 p1 <- plsr(y.train ~ X.train, ncomp = 10, validation = "LOO")
-plot(RMSEP(p1), legendpos = "topright")
-plot(R2(p1), legendpos = "bottomright")
 ```
 
-After the analysis of the above plots that choosing 5 components would be enough for our model.
+```{r}
+plot(R2(p1), legendpos = "bottomright")
+plot(RMSEP(p1), legendpos = "topright")
+```
+
+After the analysis of the above plots that choosing 4 components would be enough for our model as increasing this value does not make any improvement in the value of the Root Mean Squared Error.
 
 ```{r}
-c <- 5
+c <- 4
 ```
 
 **4**
+
+The test data are being projected as supplementary individuals onto the selected 4 PLS1 components.
 
 ```{r}
 projection <- X.test %*% p1$projection[, 1:c]
 ```
 
 **5**
+
+Plotting the components.
 
 ```{r}
 getColor <- function(x) {
@@ -73,12 +96,19 @@ legend(
   )
 ```
 
+Even though on the above plot only first two components are used, the individuals with different leukemia types seem to be well separated one from the other. 
+
 **6**
 
-Obtain the logistic regression model (or any other model of your choice) to predict the response in the training data, using as input the selected PLS1 components.
+The next task is to perform the logistic regression (the Generalized Linear Model with binomial distribution and logit as link function) using as input the selected 4 PLS1 components.
 
 ```{r}
 model <- glm(y.train ~ p1$scores[, 1:c], family = "binomial"(link = "logit"))
+```
+
+The error on the training data is equal to 0.
+
+```{r}
 sum((predict.glm(model) > 0) != y.train)
 ```
 
@@ -88,4 +118,7 @@ sum((predict.glm(model) > 0) != y.train)
 pred <- projection %*% model$coefficients[-1] + model$coefficients[1]
 sum((pred > 0) != y.test) / length(y.test)
 ```
+
 In our test sample we have obtained the error of 0.02941176. This means that only one of 34 examples was misclassified.
+
+Summing up the Partial Least Squares algorithm allowed make quite an accurate prediction using only 4 most significant components calculated on the basis of over 7000 original explanatory variables.
