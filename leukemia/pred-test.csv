@@ -1,4 +1,4 @@
-Samples;Actual;Predicted;PS;Call;Correct
+Samples;Actual;Predicted;PredictionStrength;Call;Correct
 39;ALL;ALL;0.78;YES;YES
 40;ALL;ALL;0.68;YES;YES
 41;ALL;ALL;0.99;YES;YES

@@ -55,7 +55,6 @@ p1 <- plsr(y.train ~ X.train, ncomp = 10, validation = "LOO")
 ```
 
 ```{r}
-plot(R2(p1), legendpos = "bottomright")
 plot(RMSEP(p1), legendpos = "topright")
 ```
 
@@ -121,4 +120,4 @@ sum((pred > 0) != y.test) / length(y.test)
 
 In our test sample we have obtained the error of 0.02941176. This means that only one of 34 examples was misclassified.
 
-Summing up the Partial Least Squares algorithm allowed make quite an accurate prediction using only 4 most significant components calculated on the basis of over 7000 original explanatory variables.
+Summing up the Partial Least Squares algorithm allowed to make quite an accurate prediction using only 4 most significant components calculated on the basis of over 7000 original explanatory variables.
