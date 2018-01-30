@@ -3,7 +3,7 @@ title: "Exercise - PLS2. ZIP data"
 output: html_document
 ---
 
-```{r}
+```{r, message=FALSE}
 library(pls)
 ```
 
@@ -74,8 +74,7 @@ pls <- plsr(Y.train.one.hot ~ X.train, ncomp = ncomp, validation = "LOO")
 
 In order to assess the models the bias-corrected cross-validation estimate will be plotted as the function of the number of components.
 
-Each response the `adjCV` score will be weighted by the number of it's representatives.
-
+For each response the `adjCV` score will be weighted by the number of it's representatives in the training sample.
 
 ```{r}
 adjCV <- RMSEP(pls)$val[2,,]
@@ -83,7 +82,7 @@ adjCV.weighted <- as.numeric(colSums(Y.train.one.hot) %*% adjCV / sum(colSums(Y.
 plot(0:ncomp, adjCV.weighted)
 ```
 
-The number of components that optimize the value of `adjCV` is (-1 because the first model has no components, only intercept):
+The number of components that optimize the value of `adjCV` is (1 is subtracted, because the first model has no components, only the intercept):
 
 ```{r}
 which.min(adjCV.weighted) - 1
@@ -151,15 +150,14 @@ The number of components that minimizes the error rate on the test data is:
 preds$c[which.min(preds$error)]
 ```
 
-And the error rate obtained with it is:
+And finally, the error rate obtained with them is equal to:
 
 ```{r}
 min(preds$error)
 ```
 
-While the error rate obtained with the number of components that has maximized the R2 is:
+It might be also interesting to check what is the error rate obtained with the number of components that has maximized the $R^2$ score:
 
 ```{r}
 preds$error[which.max(preds$mean.r2)]
 ```
-
